@@ -18,6 +18,8 @@ Escribe aquí. Selecciona un texto y usa la barra de herramientas para darle for
 
 const content = ref(localStorage.getItem('markdown-studio-content') || starter)
 const fileName = ref(localStorage.getItem('markdown-studio-name') || 'mi-documento.md')
+const isDark = ref(localStorage.getItem('markdown-studio-theme') === 'dark')
+
 const editor = ref(null)
 const fileInput = ref(null)
 const status = ref('Listo para editar')
@@ -28,6 +30,47 @@ watch([content, fileName], () => {
   localStorage.setItem('markdown-studio-content', content.value)
   localStorage.setItem('markdown-studio-name', fileName.value)
 }, { deep: true })
+
+watch(isDark, (val) => {
+  const theme = val ? 'dark' : 'light'
+  document.documentElement.setAttribute('data-theme', theme)
+  localStorage.setItem('markdown-studio-theme', theme)
+}, { immediate: true })
+
+function toggleTheme(event) {
+  const nextTheme = !isDark.value
+  
+  if (!document.startViewTransition) {
+    isDark.value = nextTheme
+    return
+  }
+
+  const x = event?.clientX ?? window.innerWidth / 2
+  const y = event?.clientY ?? window.innerHeight / 2
+  const endRadius = Math.hypot(
+    Math.max(x, window.innerWidth - x),
+    Math.max(y, window.innerHeight - y)
+  )
+
+  const transition = document.startViewTransition(() => {
+    isDark.value = nextTheme
+  })
+
+  transition.ready.then(() => {
+    const clipPath = [
+      `circle(0px at ${x}px ${y}px)`,
+      `circle(${endRadius}px at ${x}px ${y}px)`
+    ]
+    document.documentElement.animate(
+      { clipPath },
+      {
+        duration: 450,
+        easing: 'ease-in-out',
+        pseudoElement: '::view-transition-new(root)'
+      }
+    )
+  })
+}
 
 const rendered = computed(() => renderMarkdown(content.value))
 const wordCount = computed(() => content.value.trim() ? content.value.trim().split(/\s+/).length : 0)
@@ -122,14 +165,87 @@ onMounted(() => { if (!('showSaveFilePicker' in window)) saveLocation.value = 'D
 <template>
   <main class="app-shell">
     <header class="topbar">
-      <div class="brand"><div class="brand-mark">M</div><span>Markdown Studio</span><small>Editor y lector</small></div>
-      <div class="header-actions"><button class="ghost" @click="newDocument">＋ Nuevo</button><button class="ghost" @click="fileInput.click()">↥ Abrir .md</button><button class="ghost" @click="configureFolder">⌁ Carpeta</button><button class="primary" @click="saveFile">Guardar archivo</button><input ref="fileInput" type="file" accept=".md,text/markdown,text/plain" hidden @change="openFile"></div>
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <span>Markdown Studio</span>
+        <small>Editor y lector</small>
+      </div>
+      <div class="header-actions">
+        <button
+          class="theme-switch-btn"
+          :aria-label="isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+          :title="isDark ? 'Modo claro (Sol)' : 'Modo oscuro (Luna)'"
+          @click="toggleTheme"
+        >
+          <svg class="switch-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+          <div class="switch-knob">
+            <svg v-if="!isDark" class="switch-knob-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+            </svg>
+            <svg v-else class="switch-knob-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+            </svg>
+          </div>
+          <svg class="switch-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+          </svg>
+        </button>
+
+        <button class="ghost" @click="newDocument">＋ Nuevo</button>
+        <button class="ghost" @click="fileInput.click()">↥ Abrir .md</button>
+        <button class="ghost" @click="configureFolder">⌁ Carpeta</button>
+        <button class="primary" @click="saveFile">Guardar archivo</button>
+        <input ref="fileInput" type="file" accept=".md,text/markdown,text/plain" hidden @change="openFile">
+      </div>
     </header>
-    <section class="document-bar"><input v-model="fileName" aria-label="Nombre del archivo"><span class="location">⌁ {{ saveLocation }}</span><span class="status">● {{ status }}</span></section>
-    <section class="workspace">
-      <article class="pane editor-pane"><div class="pane-title"><span>EDITOR</span><span>{{ wordCount }} palabras</span></div><div class="toolbar"><select aria-label="Encabezado" @change="heading(Number($event.target.value)); $event.target.value = ''"><option value="">Encabezado</option><option value="1">Título H1</option><option value="2">Subtítulo H2</option><option value="3">Sección H3</option></select><button title="Negrita" @click="wrap('**')"><b>B</b></button><button title="Cursiva" @click="wrap('*')"><i>I</i></button><button title="Tachado" @click="wrap('~~')">S̶</button><button title="Código" @click="wrap('`')">&lt;/&gt;</button><span></span><button title="Lista" @click="linePrefix('- ')">☷</button><button title="Lista numerada" @click="linePrefix('1. ')">☷₁</button><button title="Cita" @click="linePrefix('&gt; ')">❝</button><button title="Insertar tabla" @click="insertTable">▦</button><button title="Enlace" @click="wrap('[', '](https://)', 'texto del enlace')">↗</button><span></span><select aria-label="Tamaño de letra" @change="changeSize($event.target.value); $event.target.value = ''"><option value="">Tamaño</option><option value="14px">Pequeño</option><option value="18px">Normal</option><option value="24px">Grande</option><option value="32px">Muy grande</option></select></div><textarea ref="editor" v-model="content" spellcheck="true" aria-label="Editor Markdown"></textarea></article>
-      <article class="pane preview-pane"><div class="pane-title"><span>VISTA PREVIA</span><span class="live">● En vivo</span></div><div class="preview-content" v-html="rendered"></div></article>
+    <section class="document-bar">
+      <input v-model="fileName" aria-label="Nombre del archivo">
+      <span class="location">⌁ {{ saveLocation }}</span>
+      <span class="status">● {{ status }}</span>
     </section>
-    <footer><span>Compatible con archivos Markdown (.md)</span><span>Los cambios se conservan localmente mientras editas</span></footer>
+    <section class="workspace">
+      <article class="pane editor-pane">
+        <div class="pane-title"><span>EDITOR</span><span>{{ wordCount }} palabras</span></div>
+        <div class="toolbar">
+          <select aria-label="Encabezado" @change="heading(Number($event.target.value)); $event.target.value = ''">
+            <option value="">Encabezado</option>
+            <option value="1">Título H1</option>
+            <option value="2">Subtítulo H2</option>
+            <option value="3">Sección H3</option>
+          </select>
+          <button title="Negrita" @click="wrap('**')"><b>B</b></button>
+          <button title="Cursiva" @click="wrap('*')"><i>I</i></button>
+          <button title="Tachado" @click="wrap('~~')">S̶</button>
+          <button title="Código" @click="wrap('`')">&lt;/&gt;</button>
+          <span></span>
+          <button title="Lista" @click="linePrefix('- ')">☷</button>
+          <button title="Lista numerada" @click="linePrefix('1. ')">☷₁</button>
+          <button title="Cita" @click="linePrefix('&gt; ')">❝</button>
+          <button title="Insertar tabla" @click="insertTable">▦</button>
+          <button title="Enlace" @click="wrap('[', '](https://)', 'texto del enlace')">↗</button>
+          <span></span>
+          <select aria-label="Tamaño de letra" @change="changeSize($event.target.value); $event.target.value = ''">
+            <option value="">Tamaño</option>
+            <option value="14px">Pequeño</option>
+            <option value="18px">Normal</option>
+            <option value="24px">Grande</option>
+            <option value="32px">Muy grande</option>
+          </select>
+        </div>
+        <textarea ref="editor" v-model="content" spellcheck="true" aria-label="Editor Markdown"></textarea>
+      </article>
+      <article class="pane preview-pane">
+        <div class="pane-title"><span>VISTA PREVIA</span><span class="live">● En vivo</span></div>
+        <div class="preview-content" v-html="rendered"></div>
+      </article>
+    </section>
+    <footer>
+      <span>Compatible con archivos Markdown (.md)</span>
+      <span>Los cambios se conservan localmente mientras editas</span>
+    </footer>
   </main>
 </template>
