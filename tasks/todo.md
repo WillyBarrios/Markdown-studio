@@ -3,9 +3,11 @@
 - [x] Corregir el script de construcción (`build`) en `package.json` (`"vite build"`)
 - [x] Configurar el `base` path en `vite.config.js` (`base: '/Markdown-studio/'`)
 - [x] Crear el archivo `public/.nojekyll` para deshabilitar Jekyll en GitHub Pages
-- [x] Crear el flujo de trabajo de GitHub Actions (`.github/workflows/deploy.yml`) para despliegue automático
+- [x] Solucionar regla de `pnpm-workspace.yaml` agregando el campo `packages: - '.'`
+- [x] Eliminar el flujo duplicado `jekyll-gh-pages.yml` que sobrescribía la compilación de Vite
 - [x] Probar la construcción local del sitio (`pnpm build`) y verificar la carpeta `dist`
 
-## Diagnóstico del Error MIME (text/html)
-- El error ocurre porque GitHub Pages está configurado actualmente en modo **"Deploy from a branch"** (desplegando el código fuente sin compilar directamente desde la rama `main`). Por ello, la página intenta cargar `/src/main.js` en lugar del bundle compilado en `dist/`.
-- **Solución requerida**: Cambiar el origen de publicación en los ajustes del repositorio en GitHub (`Settings -> Pages -> Source: GitHub Actions`).
+## Diagnóstico Final Solucionado
+- Existían dos flujos de GitHub Actions ejecutándose al mismo tiempo: `Deploy to GitHub Pages` (el de Vite) y `Deploy Jekyll with GitHub Pages dependencies preinstalled` (creado automáticamente por GitHub).
+- El flujo de Jekyll se ejecutaba después y sobrescribía el despliegue con los archivos fuente sin compilar (`/src/main.js`).
+- Se eliminó `.github/workflows/jekyll-gh-pages.yml` y se envió el commit a `main`.
