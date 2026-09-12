@@ -1,13 +1,14 @@
-# Plan de Preparación para GitHub Pages
+# Plan: Modo Oscuro con Animaciones (Sol / Luna)
 
-- [x] Corregir el script de construcción (`build`) en `package.json` (`"vite build"`)
-- [x] Configurar el `base` path en `vite.config.js` (`base: '/Markdown-studio/'`)
-- [x] Crear el archivo `public/.nojekyll` para deshabilitar Jekyll en GitHub Pages
-- [x] Solucionar regla de `pnpm-workspace.yaml` agregando el campo `packages: - '.'`
-- [x] Eliminar el flujo duplicado `jekyll-gh-pages.yml` que sobrescribía la compilación de Vite
-- [x] Probar la construcción local del sitio (`pnpm build`) y verificar la carpeta `dist`
+- [x] Definir variables de diseño CSS (`:root` y `[data-theme="dark"]`) para modo claro y oscuro
+- [x] Implementar la reactividad del tema en `App.vue` con soporte de `localStorage`
+- [x] Crear el botón de switch interactivo (Sol/Luna) con animaciones CSS (rotación, resplandor, micro-animación)
+- [x] Implementar la animación de apertura / transición suave al cambiar entre temas (View Transitions API + CSS)
+- [x] Ajustar la vista previa de Markdown (tablas, citas, bloques de código, encabezados) para el modo oscuro
+- [x] Verificar el comportamiento y la persistencia en el navegador (`pnpm build` exitoso)
 
-## Diagnóstico Final Solucionado
-- Existían dos flujos de GitHub Actions ejecutándose al mismo tiempo: `Deploy to GitHub Pages` (el de Vite) y `Deploy Jekyll with GitHub Pages dependencies preinstalled` (creado automáticamente por GitHub).
-- El flujo de Jekyll se ejecutaba después y sobrescribía el despliegue con los archivos fuente sin compilar (`/src/main.js`).
-- Se eliminó `.github/workflows/jekyll-gh-pages.yml` y se envió el commit a `main`.
+## Revisión de Resultados
+- Se incorporaron las variables CSS en `src/style.css` para cambiar instantánea y suavemente todos los componentes (topbar, document bar, editor, toolbar, vista previa y footer).
+- Se implementó en `src/App.vue` el botón de conmutación de switch animado con iconos de Sol (modo claro) y Luna (modo oscuro).
+- Se agregó la animación de apertura radial mediante View Transitions API con fallback a transición suave CSS.
+- Se mantiene la persistencia del tema seleccionado en `localStorage`.
