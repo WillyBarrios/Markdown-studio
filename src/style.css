@@ -136,6 +136,7 @@ button { cursor: pointer; border: 0; border-radius: 6px; padding: 9px 14px; tran
 .ghost:hover { background: #1e293a; color: #ffffff; }
 .primary { background: var(--brand-orange); color: white; }
 .primary:hover { background: var(--brand-orange-hover); }
+.ghost.active { background: #1e293a; color: #ffffff; border-color: var(--brand-orange); }
 
 /* Switch animado Sol / Luna */
 .theme-switch-btn {
@@ -241,6 +242,90 @@ button { cursor: pointer; border: 0; border-radius: 6px; padding: 9px 14px; tran
 }
 .location { flex: 1; }
 .status { color: #37996b; font-weight: 600; }
+
+/* Área principal: explorador de Nextcloud + workspace */
+.main-area { flex: 1; display: flex; min-height: 0; }
+
+/* Explorador estilo GitHub conectado a Nextcloud */
+.cloud-explorer {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-pane);
+  border-right: 1px solid var(--border-color);
+  overflow: hidden;
+}
+.cloud-header {
+  height: 47px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-pane-title);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.cloud-header-actions { display: flex; gap: 4px; }
+.icon-btn {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 4px 7px;
+  border-radius: 4px;
+}
+.icon-btn:hover { background: var(--bg-toolbar-button-hover); color: var(--text-main); }
+.icon-btn:disabled { opacity: .35; cursor: default; }
+
+.cloud-form { padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.cloud-form label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.cloud-form label.checkbox { flex-direction: row; align-items: center; gap: 7px; font-weight: 500; }
+.cloud-form input[type="text"], .cloud-form input:not([type]), .cloud-form input[type="password"], .cloud-form input[type="checkbox"] { width: auto; }
+.cloud-form input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-toolbar);
+  color: var(--text-main);
+  font-size: 12px;
+  outline: none;
+}
+.cloud-form input:focus { border-color: var(--brand-orange); }
+.cloud-hint { font-size: 10.5px; line-height: 1.5; color: var(--text-muted); margin: 0; }
+.cloud-error { font-size: 11px; color: #d9534f; margin: 0; }
+.cloud-status { font-size: 11px; color: var(--text-muted); padding: 0 16px; }
+
+.cloud-browser { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.cloud-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-toolbar);
+  background: var(--bg-toolbar);
+}
+.path-text { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; flex: 1; }
+.cloud-list li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  font-size: 12.5px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+.cloud-list li:hover { background: var(--bg-toolbar-button-hover); }
+.cloud-list li.is-muted { opacity: .5; }
+.cloud-list li.is-dir { font-weight: 600; }
+.entry-icon { font-size: 13px; }
+.entry-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-empty { color: var(--text-muted); font-style: italic; cursor: default; }
+.cloud-empty:hover { background: none; }
 
 /* Workspace & Panes */
 .workspace { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
@@ -396,6 +481,8 @@ footer {
 /* Responsivo */
 @media (max-width: 840px) {
   .topbar { padding: 14px 18px; align-items: flex-start; flex-direction: column; }
+  .main-area { flex-direction: column; }
+  .cloud-explorer { width: 100%; max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--border-color); }
   .workspace { grid-template-columns: 1fr; }
   .editor-pane { min-height: 47vh; border-right: 0; border-bottom: 1px solid var(--border-color); }
   .document-bar { padding: 0 18px; }

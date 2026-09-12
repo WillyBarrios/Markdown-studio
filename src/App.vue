@@ -1,5 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import CloudExplorer from './components/CloudExplorer.vue'
+import { useNextcloud } from './composables/useNextcloud'
 
 const starter = `# Mi nuevo documento
 
@@ -25,6 +27,8 @@ const fileInput = ref(null)
 const status = ref('Listo para editar')
 const saveLocation = ref('Descargas del navegador')
 const directoryHandle = ref(null)
+const showCloud = ref(false)
+const { state: cloudState, saveCurrent, saveAs, tryAutoConnect } = useNextcloud()
 
 watch([content, fileName], () => {
   localStorage.setItem('markdown-studio-content', content.value)
@@ -159,7 +163,34 @@ async function configureFolder() {
   try { directoryHandle.value = await window.showDirectoryPicker({ mode: 'readwrite' }); saveLocation.value = `Carpeta configurada: ${directoryHandle.value.name}`; status.value = 'Ruta de guardado configurada' } catch (error) { if (error.name !== 'AbortError') status.value = 'No se pudo seleccionar la carpeta' }
 }
 async function openFile(event) { const file = event.target.files?.[0]; if (!file) return; content.value = await file.text(); fileName.value = file.name; status.value = `Archivo cargado: ${file.name}`; event.target.value = '' }
-onMounted(() => { if (!('showSaveFilePicker' in window)) saveLocation.value = 'Descargas del navegador (tu navegador no permite elegir carpeta)' })
+
+function openFromCloud(file) {
+  content.value = file.content
+  fileName.value = file.name
+  saveLocation.value = `Nextcloud: ${cloudState.path === '/' ? '/' : cloudState.path}`
+  status.value = `Archivo cargado desde Nextcloud: ${file.name}`
+}
+
+async function saveToCloud() {
+  if (!cloudState.connected) { showCloud.value = true; status.value = 'Conéctate a Nextcloud primero'; return }
+  try {
+    if (cloudState.currentFile) {
+      await saveCurrent(content.value)
+      status.value = `Guardado en Nextcloud: ${cloudState.currentFile.path}`
+    } else {
+      const name = prompt('Nombre del archivo en Nextcloud:', normalizeName())
+      if (!name) return
+      await saveAs(name, content.value)
+      fileName.value = cloudState.currentFile.name
+      status.value = `Guardado en Nextcloud: ${cloudState.currentFile.path}`
+    }
+    saveLocation.value = `Nextcloud: ${cloudState.currentFile.path}`
+  } catch (error) {
+    status.value = error.message || 'No se pudo guardar en Nextcloud'
+  }
+}
+
+onMounted(() => { if (!('showSaveFilePicker' in window)) saveLocation.value = 'Descargas del navegador (tu navegador no permite elegir carpeta)'; tryAutoConnect() })
 </script>
 
 <template>
@@ -198,7 +229,9 @@ onMounted(() => { if (!('showSaveFilePicker' in window)) saveLocation.value = 'D
         <button class="ghost" @click="newDocument">＋ Nuevo</button>
         <button class="ghost" @click="fileInput.click()">↥ Abrir .md</button>
         <button class="ghost" @click="configureFolder">⌁ Carpeta</button>
+        <button class="ghost" :class="{ active: showCloud }" @click="showCloud = !showCloud">☁ Nextcloud</button>
         <button class="primary" @click="saveFile">Guardar archivo</button>
+        <button v-if="cloudState.connected" class="primary" @click="saveToCloud">☁ Guardar en la nube</button>
         <input ref="fileInput" type="file" accept=".md,text/markdown,text/plain" hidden @change="openFile">
       </div>
     </header>
@@ -207,7 +240,9 @@ onMounted(() => { if (!('showSaveFilePicker' in window)) saveLocation.value = 'D
       <span class="location">⌁ {{ saveLocation }}</span>
       <span class="status">● {{ status }}</span>
     </section>
-    <section class="workspace">
+    <section class="main-area">
+      <CloudExplorer v-if="showCloud" @open="openFromCloud" />
+      <section class="workspace">
       <article class="pane editor-pane">
         <div class="pane-title"><span>EDITOR</span><span>{{ wordCount }} palabras</span></div>
         <div class="toolbar">
@@ -242,6 +277,7 @@ onMounted(() => { if (!('showSaveFilePicker' in window)) saveLocation.value = 'D
         <div class="pane-title"><span>VISTA PREVIA</span><span class="live">● En vivo</span></div>
         <div class="preview-content" v-html="rendered"></div>
       </article>
+      </section>
     </section>
     <footer>
       <span>Compatible con archivos Markdown (.md)</span>
