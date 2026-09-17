@@ -164,6 +164,45 @@ async function configureFolder() {
 }
 async function openFile(event) { const file = event.target.files?.[0]; if (!file) return; content.value = await file.text(); fileName.value = file.name; status.value = `Archivo cargado: ${file.name}`; event.target.value = '' }
 
+function exportToPdf() {
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) { status.value = 'El navegador bloqueó la ventana de impresión'; return }
+  const title = normalizeName().replace(/\.md$/i, '')
+  printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(title)}</title>
+<style>
+  body { font-family: 'Source Serif 4', Georgia, serif; color: #263345; margin: 40px auto; max-width: 800px; line-height: 1.7; }
+  h1, h2, h3, h4, h5, h6 { font-family: Manrope, Arial, sans-serif; color: #18283a; line-height: 1.25; }
+  h1 { font-size: 32px; margin: 0 0 22px; }
+  h2 { font-size: 23px; margin: 36px 0 12px; }
+  h3 { font-size: 18px; margin: 26px 0 8px; }
+  h4, h5, h6 { font-size: 15px; margin: 20px 0 8px; }
+  p { margin: 0 0 13px; }
+  a { color: #e8714b; }
+  blockquote { border-left: 4px solid #e8714b; margin: 16px 0; padding: 4px 16px; color: #687588; font-style: italic; }
+  ul, ol { padding-left: 25px; margin: 10px 0 16px; }
+  code { font-family: 'DM Mono', monospace; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; }
+  pre { background: #f1f5f9; padding: 14px; border-radius: 8px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  hr { border: 0; border-top: 1px solid #d8dee8; margin: 28px 0; }
+  img { max-width: 100%; border-radius: 6px; }
+  .table-wrap { overflow-x: auto; margin: 18px 0; }
+  table { width: 100%; border-collapse: collapse; font-family: Manrope, Arial, sans-serif; font-size: 13px; }
+  th { text-align: left; background: #f1f5f9; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  th, td { border: 1px solid #d8dee8; padding: 9px 11px; }
+  @media print { body { margin: 0; } }
+</style>
+</head>
+<body>${rendered.value}</body>
+</html>`)
+  printWindow.document.close()
+  printWindow.onload = () => { printWindow.focus(); printWindow.print() }
+  status.value = 'Abriendo vista de impresión para exportar a PDF'
+}
+
 function openFromCloud(file) {
   content.value = file.content
   fileName.value = file.name
@@ -274,7 +313,7 @@ onMounted(() => { if (!('showSaveFilePicker' in window)) saveLocation.value = 'D
         <textarea ref="editor" v-model="content" spellcheck="true" aria-label="Editor Markdown"></textarea>
       </article>
       <article class="pane preview-pane">
-        <div class="pane-title"><span>VISTA PREVIA</span><span class="live">● En vivo</span></div>
+        <div class="pane-title"><span>VISTA PREVIA</span><span class="preview-actions"><button class="pdf-btn" @click="exportToPdf" title="Exportar la vista previa a PDF">⭳ PDF</button><span class="live">● En vivo</span></span></div>
         <div class="preview-content" v-html="rendered"></div>
       </article>
       </section>
