@@ -459,6 +459,17 @@ textarea {
 .preview-content pre code { background: none; padding: 0; color: inherit; }
 .preview-content hr { border: 0; border-top: 1px solid var(--border-color); margin: 28px 0; }
 .preview-content img { max-width: 100%; border-radius: 6px; }
+.preview-content .mermaid {
+  display: flex;
+  justify-content: center;
+  margin: 18px 0;
+  padding: 12px;
+  background: var(--preview-pre-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: auto;
+}
+.preview-content .mermaid svg { max-width: 100%; height: auto; }
 
 /* Table styling */
 .table-wrap { overflow-x: auto; margin: 18px 0; }

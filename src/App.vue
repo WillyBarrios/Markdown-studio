@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import mermaid from 'mermaid'
 import CloudExplorer from './components/CloudExplorer.vue'
 import { useNextcloud } from './composables/useNextcloud'
 
@@ -22,6 +23,8 @@ const content = ref(localStorage.getItem('markdown-studio-content') || starter)
 const fileName = ref(localStorage.getItem('markdown-studio-name') || 'mi-documento.md')
 const isDark = ref(localStorage.getItem('markdown-studio-theme') === 'dark')
 
+mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: isDark.value ? 'dark' : 'default' })
+
 const editor = ref(null)
 const fileInput = ref(null)
 const status = ref('Listo para editar')
@@ -35,10 +38,14 @@ watch([content, fileName], () => {
   localStorage.setItem('markdown-studio-name', fileName.value)
 }, { deep: true })
 
+const mermaidThemeTick = ref(0)
+
 watch(isDark, (val) => {
   const theme = val ? 'dark' : 'light'
   document.documentElement.setAttribute('data-theme', theme)
   localStorage.setItem('markdown-studio-theme', theme)
+  mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: val ? 'dark' : 'default' })
+  mermaidThemeTick.value++
 }, { immediate: true })
 
 function toggleTheme(event) {
@@ -76,7 +83,15 @@ function toggleTheme(event) {
   })
 }
 
-const rendered = computed(() => renderMarkdown(content.value))
+const previewContent = ref(null)
+const rendered = computed(() => { mermaidThemeTick.value; return renderMarkdown(content.value) })
+
+watch(rendered, () => {
+  nextTick(() => {
+    const nodes = previewContent.value?.querySelectorAll('.mermaid')
+    if (nodes && nodes.length) mermaid.run({ nodes }).catch(() => {})
+  })
+})
 const wordCount = computed(() => content.value.trim() ? content.value.trim().split(/\s+/).length : 0)
 
 function escapeHtml(text) {
@@ -99,15 +114,24 @@ function inline(text) {
 function isTableSeparator(line) { return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line) }
 function tableCells(line) { return line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim()) }
 
+let mermaidBlockId = 0
+
 function renderMarkdown(markdown) {
   const lines = markdown.replace(/\r/g, '').split('\n')
-  let html = ''; let i = 0; let inCode = false; let code = []; let list = null
+  let html = ''; let i = 0; let inCode = false; let codeLang = ''; let code = []; let list = null
   const closeList = () => { if (list) { html += `</${list}>`; list = null } }
   while (i < lines.length) {
     const line = lines[i]
     if (line.startsWith('```')) {
       closeList()
-      if (inCode) { html += `<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`; code = []; inCode = false } else inCode = true
+      if (inCode) {
+        if (codeLang === 'mermaid') {
+          html += `<div class="mermaid" id="mermaid-block-${mermaidBlockId++}">${escapeHtml(code.join('\n'))}</div>`
+        } else {
+          html += `<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`
+        }
+        code = []; inCode = false; codeLang = ''
+      } else { inCode = true; codeLang = line.slice(3).trim().toLowerCase() }
       i++; continue
     }
     if (inCode) { code.push(line); i++; continue }
@@ -193,10 +217,12 @@ function exportToPdf() {
   table { width: 100%; border-collapse: collapse; font-family: Manrope, Arial, sans-serif; font-size: 13px; }
   th { text-align: left; background: #f1f5f9; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
   th, td { border: 1px solid #d8dee8; padding: 9px 11px; }
+  .mermaid { display: flex; justify-content: center; margin: 18px 0; }
+  .mermaid svg { max-width: 100%; height: auto; }
   @media print { body { margin: 0; } }
 </style>
 </head>
-<body>${rendered.value}</body>
+<body>${previewContent.value?.innerHTML || rendered.value}</body>
 </html>`)
   printWindow.document.close()
   printWindow.onload = () => { printWindow.focus(); printWindow.print() }
@@ -314,7 +340,7 @@ onMounted(() => { if (!('showSaveFilePicker' in window)) saveLocation.value = 'D
       </article>
       <article class="pane preview-pane">
         <div class="pane-title"><span>VISTA PREVIA</span><span class="preview-actions"><button class="pdf-btn" @click="exportToPdf" title="Exportar la vista previa a PDF">⭳ PDF</button><span class="live">● En vivo</span></span></div>
-        <div class="preview-content" v-html="rendered"></div>
+        <div ref="previewContent" class="preview-content" v-html="rendered"></div>
       </article>
       </section>
     </section>
